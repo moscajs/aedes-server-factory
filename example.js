@@ -5,7 +5,7 @@ var mqtt = require('mqtt')
 var mqttPacket = require('mqtt-packet')
 var net = require('net')
 var proxyProtocol = require('proxy-protocol-js')
-var createServer = require('./lib/server-factory')
+var { createServer } = require('./index')
 
 var brokerPort = 4883
 var wsBrokerPort = 4884

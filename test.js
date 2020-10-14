@@ -6,7 +6,7 @@ var mqtt = require('mqtt')
 var mqttPacket = require('mqtt-packet')
 var net = require('net')
 var proxyProtocol = require('proxy-protocol-js')
-var createServer = require('./lib/server-factory')
+var { createServer } = require('./index')
 
 // This test suite will be really effective after updating aedes and protocol-decoder module,
 // to retrieve conn details in the client @preConnect
@@ -27,7 +27,7 @@ test('tcp clients have access to the connection details from the socket', functi
     }
   })
 
-  var server = createServer({ trustProxy: true }, broker.handle)
+  var server = createServer({ trustProxy: false }, broker.handle)
 
   server.listen(port, function (err) {
     t.error(err, 'no error')
@@ -125,7 +125,7 @@ test('websocket clients have access to the connection details from the socket', 
     }
   })
 
-  var server = createServer({ trustProxy: true, ws: true }, broker.handle)
+  var server = createServer({ trustProxy: false, ws: true }, broker.handle)
 
   server.listen(port, function (err) {
     t.error(err, 'no error')

@@ -5,7 +5,7 @@
 
 /// <reference types="node" />
 
-import { ProtocolDecoder, ConnectionDetails } from 'aedes-protocol-decoder'
+import { ProtocolDecoder, ConnectionDetails, ExtractSocketDetails } from 'aedes-protocol-decoder'
 import { Duplex } from 'stream'
 import { Server as HttpServer } from 'http'
 import { Socket, Server as NetServer } from 'net'
@@ -19,6 +19,7 @@ export interface ServerFactoryOptions {
   tls?: boolean
   serverFactory?: ServerFactory
   protocolDecoder?: ProtocolDecoder
+  extractSocketDetails?: ExtractSocketDetails;
   trustProxy?: boolean
 }
 

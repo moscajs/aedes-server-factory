@@ -8,16 +8,15 @@ var net = require('net')
 var proxyProtocol = require('proxy-protocol-js')
 var { createServer } = require('./index')
 
-// This test suite will be really effective after updating aedes and protocol-decoder module,
-// to retrieve conn details in the client @preConnect
-
 test('tcp clients have access to the connection details from the socket', function (t) {
-  t.plan(2)
+  t.plan(3)
 
   var port = 4883
   var broker = aedes({
     preConnect: function (client, packet, done) {
-      if (packet) {
+      if (client && client.connDetails && client.connDetails.ipAddress) {
+        client.ip = client.connDetails.ipAddress
+        t.equal('::ffff:127.0.0.1', client.ip)
         t.equal(packet.cmd, 'connect')
       } else {
         t.fail('no ip address present')
@@ -28,7 +27,6 @@ test('tcp clients have access to the connection details from the socket', functi
   })
 
   var server = createServer({ trustProxy: false }, broker.handle)
-
   server.listen(port, function (err) {
     t.error(err, 'no error')
   })
@@ -49,7 +47,7 @@ test('tcp clients have access to the connection details from the socket', functi
 })
 
 test('tcp proxied clients have access to the connection details from the proxy header', function (t) {
-  t.plan(2)
+  t.plan(3)
 
   var port = 4883
   var clientIp = '192.168.0.140'
@@ -74,7 +72,9 @@ test('tcp proxied clients have access to the connection details from the proxy h
 
   var broker = aedes({
     preConnect: function (client, packet, done) {
-      if (packet) {
+      if (client.connDetails && client.connDetails.ipAddress) {
+        client.ip = client.connDetails.ipAddress
+        t.equal(clientIp, client.ip)
         t.equal(packet.cmd, 'connect')
       } else {
         t.fail('no ip address present')
@@ -85,7 +85,6 @@ test('tcp proxied clients have access to the connection details from the proxy h
   })
 
   var server = createServer({ trustProxy: true }, broker.handle)
-
   server.listen(port, function (err) {
     t.error(err, 'no error')
   })
@@ -109,13 +108,15 @@ test('tcp proxied clients have access to the connection details from the proxy h
 })
 
 test('websocket clients have access to the connection details from the socket', function (t) {
-  t.plan(2)
+  t.plan(3)
 
-  // var clientIp = '::ffff:127.0.0.1'
+  var clientIp = '::ffff:127.0.0.1'
   var port = 4883
   var broker = aedes({
     preConnect: function (client, packet, done) {
-      if (packet) {
+      if (client.connDetails && client.connDetails.ipAddress) {
+        client.ip = client.connDetails.ipAddress
+        t.equal(clientIp, client.ip)
         t.equal(packet.cmd, 'connect')
       } else {
         t.fail('no ip address present')
@@ -126,7 +127,6 @@ test('websocket clients have access to the connection details from the socket', 
   })
 
   var server = createServer({ trustProxy: false, ws: true }, broker.handle)
-
   server.listen(port, function (err) {
     t.error(err, 'no error')
   })
@@ -142,13 +142,15 @@ test('websocket clients have access to the connection details from the socket', 
 })
 
 test('websocket proxied clients have access to the connection details', function (t) {
-  t.plan(2)
+  t.plan(3)
 
   var clientIp = '192.168.0.140'
   var port = 4883
   var broker = aedes({
     preConnect: function (client, packet, done) {
-      if (packet) {
+      if (client.connDetails && client.connDetails.ipAddress) {
+        client.ip = client.connDetails.ipAddress
+        t.equal(clientIp, client.ip)
         t.equal(packet.cmd, 'connect')
       } else {
         t.fail('no ip address present')
@@ -159,7 +161,6 @@ test('websocket proxied clients have access to the connection details', function
   })
 
   var server = createServer({ trustProxy: true, ws: true }, broker.handle)
-
   server.listen(port, function (err) {
     t.error(err, 'no error')
   })

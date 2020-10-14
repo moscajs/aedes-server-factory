@@ -1,12 +1,14 @@
 'use strict'
 
 var aedes = require('aedes')
+var mqtt = require('mqtt')
 var mqttPacket = require('mqtt-packet')
 var net = require('net')
 var proxyProtocol = require('proxy-protocol-js')
 var createServer = require('./lib/server-factory')
 
 var brokerPort = 4883
+var wsBrokerPort = 4884
 
 // from https://stackoverflow.com/questions/57077161/how-do-i-convert-hex-buffer-to-ipv6-in-javascript
 function parseIpV6 (ip) {
@@ -18,7 +20,7 @@ function parseIpV6 (ip) {
     .replace(/:{2,}/g, '::')
 }
 
-function sendProxyPacket (version = 1, ipFamily = 4) {
+function sendProxyPacket (version = 1, ipFamily = 4, serverPort) {
   var packet = {
     cmd: 'connect',
     protocolId: 'MQTT',
@@ -37,7 +39,7 @@ function sendProxyPacket (version = 1, ipFamily = 4) {
       protocol = new proxyProtocol.V1BinaryProxyProtocol(
         proxyProtocol.INETProtocol.TCP4,
         new proxyProtocol.Peer(clientIpV4, 12345),
-        new proxyProtocol.Peer(hostIpV4, brokerPort),
+        new proxyProtocol.Peer(hostIpV4, serverPort),
         mqttPacket.generate(packet)
       ).build()
     } else if (ipFamily === 6) {
@@ -49,7 +51,7 @@ function sendProxyPacket (version = 1, ipFamily = 4) {
         ),
         new proxyProtocol.Peer(
           parseIpV6(Buffer.from(hostIpV6).toString('hex')),
-          brokerPort
+          serverPort
         ),
         mqttPacket.generate(packet)
       ).build()
@@ -63,7 +65,7 @@ function sendProxyPacket (version = 1, ipFamily = 4) {
           proxyProtocol.IPv4Address.createFrom(clientIpV4.split('.')),
           12346,
           proxyProtocol.IPv4Address.createFrom(hostIpV4.split('.')),
-          brokerPort
+          serverPort
         ),
         mqttPacket.generate(packet)
       ).build()
@@ -75,7 +77,7 @@ function sendProxyPacket (version = 1, ipFamily = 4) {
           proxyProtocol.IPv6Address.createFrom(clientIpV6),
           12346,
           proxyProtocol.IPv6Address.createFrom(hostIpV6),
-          brokerPort
+          serverPort
         ),
         mqttPacket.generate(packet)
       ).build()
@@ -128,6 +130,42 @@ function sendProxyPacket (version = 1, ipFamily = 4) {
   })
 }
 
+function sendTcpPacket (serverPort) {
+  var packet = {
+    cmd: 'connect',
+    protocolId: 'MQIsdp',
+    protocolVersion: 3,
+    clean: true,
+    clientId: 'my-client',
+    keepalive: 0
+  }
+
+  console.log('Connection to :', '0.0.0.0', serverPort)
+
+  var tcpConn = net.createConnection({
+    port: serverPort,
+    host: '0.0.0.0',
+    timeout: 150
+  })
+
+  tcpConn.on('timeout', function () {
+    tcpConn.end(mqttPacket.generate(packet))
+  })
+}
+
+function sendWsPacket (serverPort) {
+  var clientIpV4 = '192.168.1.128'
+  var client = mqtt.connect(`ws://localhost:${serverPort}`, {
+    wsOptions: {
+      headers: {
+        'X-Real-Ip': clientIpV4
+      }
+    }
+  })
+
+  setTimeout(() => client.end(true), 150)
+}
+
 function startAedes () {
   var broker = aedes({
     preConnect: function (client, packet, done) {
@@ -138,17 +176,20 @@ function startAedes () {
   })
 
   var server = createServer({ trustProxy: true }, broker.handle)
+  var httpServer = createServer({ trustProxy: true, ws: true }, broker.handle)
 
   server.listen(brokerPort, function () {
-    console.log('Aedes listening on :', server.address())
-    broker.publish({
-      topic: 'aedes/hello',
-      payload: "I'm broker " + broker.id
-    })
-    setTimeout(() => sendProxyPacket(1), 250)
-    setTimeout(() => sendProxyPacket(1, 6), 500)
-    setTimeout(() => sendProxyPacket(2), 750)
-    setTimeout(() => sendProxyPacket(2, 6), 1000)
+    console.log('Aedes listening on TCP :', server.address())
+    setTimeout(() => sendProxyPacket(1, 4, brokerPort), 250)
+    setTimeout(() => sendProxyPacket(1, 6, brokerPort), 500)
+    setTimeout(() => sendProxyPacket(2, 4, brokerPort), 750)
+    setTimeout(() => sendProxyPacket(2, 6, brokerPort), 1000)
+    setTimeout(() => sendTcpPacket(brokerPort), 1250)
+  })
+
+  httpServer.listen(wsBrokerPort, function () {
+    console.log('Aedes listening on HTTP :', httpServer.address())
+    setTimeout(() => sendWsPacket(wsBrokerPort), 1500)
   })
 
   broker.on('subscribe', function (subscriptions, client) {

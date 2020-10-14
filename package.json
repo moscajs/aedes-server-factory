@@ -47,9 +47,10 @@
   "keywords": [
     "mqtt",
     "proxy",
-    "protocol",
-    "decoder",
-    "parser"
+    "server",
+    "http",
+    "tcp",
+    "ws"
   ],
   "license": "MIT",
   "devDependencies": {

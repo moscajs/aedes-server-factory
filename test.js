@@ -26,7 +26,7 @@ test('tcp clients have access to the connection details from the socket', functi
     }
   })
 
-  var server = createServer({ trustProxy: false }, broker.handle)
+  var server = createServer(broker, { trustProxy: false })
   server.listen(port, function (err) {
     t.error(err, 'no error')
   })
@@ -84,7 +84,7 @@ test('tcp proxied clients have access to the connection details from the proxy h
     }
   })
 
-  var server = createServer({ trustProxy: true }, broker.handle)
+  var server = createServer(broker, { trustProxy: true })
   server.listen(port, function (err) {
     t.error(err, 'no error')
   })
@@ -126,7 +126,7 @@ test('websocket clients have access to the connection details from the socket', 
     }
   })
 
-  var server = createServer({ trustProxy: false, ws: true }, broker.handle)
+  var server = createServer(broker, { trustProxy: false, ws: true })
   server.listen(port, function (err) {
     t.error(err, 'no error')
   })
@@ -160,7 +160,7 @@ test('websocket proxied clients have access to the connection details', function
     }
   })
 
-  var server = createServer({ trustProxy: true, ws: true }, broker.handle)
+  var server = createServer(broker, { trustProxy: true, ws: true })
   server.listen(port, function (err) {
     t.error(err, 'no error')
   })

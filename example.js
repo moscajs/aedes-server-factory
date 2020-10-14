@@ -169,14 +169,14 @@ function sendWsPacket (serverPort) {
 function startAedes () {
   var broker = aedes({
     preConnect: function (client, packet, done) {
-      console.log('Aedes preConnect check packet:', packet)
+      console.log('Aedes preConnect : ', { connDetails: client.connDetails, packet })
       client.close()
       return done(null, true)
     }
   })
 
-  var server = createServer({ trustProxy: true }, broker.handle)
-  var httpServer = createServer({ trustProxy: true, ws: true }, broker.handle)
+  var server = createServer(broker, { trustProxy: true })
+  var httpServer = createServer(broker, { trustProxy: true, ws: true })
 
   server.listen(brokerPort, function () {
     console.log('Aedes listening on TCP :', server.address())

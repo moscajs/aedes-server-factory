@@ -5,12 +5,11 @@
 
 /// <reference types="node" />
 
-import { ProtocolDecoder, ConnectionDetails, ExtractSocketDetails } from 'aedes-protocol-decoder'
-import { Duplex } from 'stream'
+import { ProtocolDecoder, ExtractSocketDetails } from 'aedes-protocol-decoder'
 import { Server as HttpServer } from 'http'
-import { Socket, Server as NetServer } from 'net'
+import { Server as NetServer } from 'net'
 import { Http2Server, Http2SecureServer } from 'http2'
-import { Client } from 'aedes'
+import { Aedes } from 'aedes'
 
 export interface ServerFactoryOptions {
   ws?: boolean
@@ -23,14 +22,9 @@ export interface ServerFactoryOptions {
   trustProxy?: boolean
 }
 
-type Connection = Duplex | Socket
 type Server = NetServer | HttpServer | Http2Server | Http2SecureServer
 
 export type ServerFactory = (
+  broker: Aedes,
   options: ServerFactoryOptions,
-  aedesHandler: (
-    stream: Connection,
-    req?: any,
-    protocol?: ConnectionDetails
-  ) => Client
 ) => Server

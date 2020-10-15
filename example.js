@@ -9,6 +9,7 @@ var { createServer } = require('./index')
 
 var brokerPort = 4883
 var wsBrokerPort = 4884
+var messageId = 1
 
 // from https://stackoverflow.com/questions/57077161/how-do-i-convert-hex-buffer-to-ipv6-in-javascript
 function parseIpV6 (ip) {
@@ -20,30 +21,23 @@ function parseIpV6 (ip) {
     .replace(/:{2,}/g, '::')
 }
 
-function sendProxyPacket (version = 1, ipFamily = 4, serverPort) {
-  var packet = {
-    cmd: 'connect',
-    protocolId: 'MQTT',
-    protocolVersion: 4,
-    clean: true,
-    clientId: `my-client-${version}`,
-    keepalive: 0
-  }
+function generateProxyPacket (version = 1, ipFamily = 4, serverPort, packet) {
   var hostIpV4 = '0.0.0.0'
   var clientIpV4 = '192.168.1.128'
   var hostIpV6 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   var clientIpV6 = [0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 1, 128]
-  var protocol
+
+  var proxyPacket
   if (version === 1) {
     if (ipFamily === 4) {
-      protocol = new proxyProtocol.V1BinaryProxyProtocol(
+      proxyPacket = new proxyProtocol.V1BinaryProxyProtocol(
         proxyProtocol.INETProtocol.TCP4,
         new proxyProtocol.Peer(clientIpV4, 12345),
         new proxyProtocol.Peer(hostIpV4, serverPort),
         mqttPacket.generate(packet)
       ).build()
     } else if (ipFamily === 6) {
-      protocol = new proxyProtocol.V1BinaryProxyProtocol(
+      proxyPacket = new proxyProtocol.V1BinaryProxyProtocol(
         proxyProtocol.INETProtocol.TCP6,
         new proxyProtocol.Peer(
           parseIpV6(Buffer.from(clientIpV6).toString('hex')),
@@ -58,7 +52,7 @@ function sendProxyPacket (version = 1, ipFamily = 4, serverPort) {
     }
   } else if (version === 2) {
     if (ipFamily === 4) {
-      protocol = new proxyProtocol.V2ProxyProtocol(
+      proxyPacket = new proxyProtocol.V2ProxyProtocol(
         proxyProtocol.Command.LOCAL,
         proxyProtocol.TransportProtocol.STREAM,
         new proxyProtocol.IPv4ProxyAddress(
@@ -70,7 +64,7 @@ function sendProxyPacket (version = 1, ipFamily = 4, serverPort) {
         mqttPacket.generate(packet)
       ).build()
     } else if (ipFamily === 6) {
-      protocol = new proxyProtocol.V2ProxyProtocol(
+      proxyPacket = new proxyProtocol.V2ProxyProtocol(
         proxyProtocol.Command.PROXY,
         proxyProtocol.TransportProtocol.STREAM,
         new proxyProtocol.IPv6ProxyAddress(
@@ -83,11 +77,58 @@ function sendProxyPacket (version = 1, ipFamily = 4, serverPort) {
       ).build()
     }
   }
+  return proxyPacket
+}
 
+function sendPackets (conn) {
+  setTimeout(function () {
+    conn.write(mqttPacket.generate({
+      cmd: 'subscribe',
+      messageId: messageId += 1,
+      subscriptions: [{
+        topic: 'test',
+        qos: 0
+      }]
+    }))
+  }, 150)
+
+  setTimeout(function () {
+    conn.write(mqttPacket.generate({
+      cmd: 'publish',
+      messageId: messageId += 1,
+      retain: false,
+      qos: 0,
+      dup: false,
+      length: 10,
+      topic: 'test',
+      payload: 'test'
+    }))
+  }, 300)
+
+  setTimeout(function () {
+    conn.end(mqttPacket.generate({
+      cmd: 'disconnect',
+      protocolId: 'MQTT',
+      protocolVersion: 4
+    }))
+  }, 450)
+}
+
+function sendProxyPacket (version = 1, ipFamily = 4, serverPort) {
+  var packet = {
+    cmd: 'connect',
+    protocolId: 'MQTT',
+    protocolVersion: 4,
+    clean: true,
+    clientId: `tcp-proxy-client-${version}-${ipFamily}`,
+    keepalive: 0
+  }
+
+  var proxyPacket = generateProxyPacket(version, ipFamily, serverPort, packet)
   var parsedProto =
     version === 1
-      ? proxyProtocol.V1BinaryProxyProtocol.parse(protocol)
-      : proxyProtocol.V2ProxyProtocol.parse(protocol)
+      ? proxyProtocol.V1BinaryProxyProtocol.parse(proxyPacket)
+      : proxyProtocol.V2ProxyProtocol.parse(proxyPacket)
   // console.log(parsedProto)
 
   var dstPort =
@@ -101,13 +142,11 @@ function sendProxyPacket (version = 1, ipFamily = 4, serverPort) {
       dstHost = parsedProto.destination.ipAddress
     } else if (ipFamily === 6) {
       dstHost = parsedProto.destination.ipAddress
-      // console.log('ipV6 host :', parsedProto.destination.ipAddress)
     }
   } else if (version === 2) {
     if (ipFamily === 4) {
       dstHost = parsedProto.proxyAddress.destinationAddress.address.join('.')
     } else if (ipFamily === 6) {
-      // console.log('ipV6 client :', parseIpV6(Buffer.from(clientIpV6).toString('hex')))
       dstHost = parseIpV6(
         Buffer.from(
           parsedProto.proxyAddress.destinationAddress.address
@@ -119,15 +158,12 @@ function sendProxyPacket (version = 1, ipFamily = 4, serverPort) {
   console.log('Connection to :', dstHost, dstPort)
   var mqttConn = net.createConnection({
     port: dstPort,
-    host: dstHost,
-    timeout: 150
+    host: dstHost
+  }, function () {
+    this.write(proxyPacket)
   })
 
-  var data = protocol
-
-  mqttConn.on('timeout', function () {
-    mqttConn.end(data)
-  })
+  sendPackets(mqttConn)
 }
 
 function sendTcpPacket (serverPort) {
@@ -136,7 +172,7 @@ function sendTcpPacket (serverPort) {
     protocolId: 'MQIsdp',
     protocolVersion: 3,
     clean: true,
-    clientId: 'my-client',
+    clientId: 'tcp-client',
     keepalive: 0
   }
 
@@ -144,18 +180,18 @@ function sendTcpPacket (serverPort) {
 
   var tcpConn = net.createConnection({
     port: serverPort,
-    host: '0.0.0.0',
-    timeout: 150
+    host: '0.0.0.0'
+  }, function () {
+    this.write(mqttPacket.generate(packet))
   })
 
-  tcpConn.on('timeout', function () {
-    tcpConn.end(mqttPacket.generate(packet))
-  })
+  sendPackets(tcpConn)
 }
 
 function sendWsPacket (serverPort) {
   var clientIpV4 = '192.168.1.128'
   var client = mqtt.connect(`ws://localhost:${serverPort}`, {
+    clientId: 'ws-client',
     wsOptions: {
       headers: {
         'X-Real-Ip': clientIpV4
@@ -163,15 +199,19 @@ function sendWsPacket (serverPort) {
     }
   })
 
-  setTimeout(() => client.end(true), 150)
+  setTimeout(() => client.subscribe('test'), 150)
+  setTimeout(() => client.publish('test', 'test'), 300)
+  setTimeout(() => client.end(true), 450)
 }
 
 function startAedes () {
+  var delay = 500
+
   var broker = aedes({
     preConnect: function (client, packet, done) {
-      console.log('Aedes preConnect : ', { connDetails: client.connDetails, packet })
-      client.close()
-      return done(null, true)
+      // console.log('Aedes preConnect : ', { connDetails: client.connDetails, packet })
+      client.ip = client.connDetails.ipAddress
+      done(null, true)
     }
   })
 
@@ -180,16 +220,16 @@ function startAedes () {
 
   server.listen(brokerPort, function () {
     console.log('Aedes listening on TCP :', server.address())
-    setTimeout(() => sendProxyPacket(1, 4, brokerPort), 250)
-    setTimeout(() => sendProxyPacket(1, 6, brokerPort), 500)
-    setTimeout(() => sendProxyPacket(2, 4, brokerPort), 750)
-    setTimeout(() => sendProxyPacket(2, 6, brokerPort), 1000)
-    setTimeout(() => sendTcpPacket(brokerPort), 1250)
+    setTimeout(() => sendProxyPacket(1, 4, brokerPort), delay)
+    setTimeout(() => sendProxyPacket(1, 6, brokerPort), delay * 2)
+    setTimeout(() => sendProxyPacket(2, 4, brokerPort), delay * 3)
+    setTimeout(() => sendProxyPacket(2, 6, brokerPort), delay * 4)
+    setTimeout(() => sendTcpPacket(brokerPort), delay * 5)
   })
 
   httpServer.listen(wsBrokerPort, function () {
     console.log('Aedes listening on HTTP :', httpServer.address())
-    setTimeout(() => sendWsPacket(wsBrokerPort), 1500)
+    setTimeout(() => sendWsPacket(wsBrokerPort), delay * 6)
   })
 
   broker.on('subscribe', function (subscriptions, client) {

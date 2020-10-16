@@ -29,15 +29,15 @@ const createServer = (aedes, options) => {
 
   let server = null
   if (options.serverFactory) {
-    server = options.serverFactory(aedesHandler, options)
+    server = options.serverFactory(aedes, options)
   } else if (options.tls) {
     server = tls.createServer(options, aedesHandler)
   } else if (options.ws) {
     if (options.https) {
       if (options.http2) {
-        server = http2.createSecureServer(options.https)
+        server = http2.createSecureServer()
       } else {
-        server = https.createServer(options.https)
+        server = https.createServer()
       }
     } else {
       if (options.http2) {
@@ -65,24 +65,31 @@ const bindConnection = (options, aedesHandler, conn, req = {}) => {
   if (options.trustProxy) {
     extractConnectionDetails(options, aedesHandler, conn, req)
   } else {
-    const protocol = options.extractSocketDetails(conn.socket || conn)
-    req.connDetails = protocol
+    req.connDetails = options.extractSocketDetails(conn.socket || conn)
     aedesHandler(conn, req)
   }
 }
 
 const extractConnectionDetails = (options, aedesHandler, conn, req = {}) => {
-  const onData = (buffer) => {
-    const protocol = options.protocolDecoder(conn, buffer, req)
-    req.connDetails = protocol
-    conn.removeListener('data', onData)
-    conn.pause()
-    conn.unshift(protocol.data || buffer)
-    aedesHandler(conn, req)
+  // todo check drain event ?
+  const onReadable = (err) => {
+    if (err) {
+      return
+    }
+    const buffer = conn.read(null)
+    if (buffer) {
+      const protocol = options.protocolDecoder(conn, buffer, req)
+      req.connDetails = protocol
+      conn.removeListener('readable', onReadable)
+      conn.pause()
+      conn.unshift(protocol.data || buffer)
+      aedesHandler(conn, req)
+    }
   }
 
-  conn.on('data', onData)
+  conn.on('readable', onReadable)
 }
+
 module.exports = {
   createServer
 }

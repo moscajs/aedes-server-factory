@@ -9,10 +9,11 @@ const tls = require('tls')
 const WebSocket = require('ws')
 
 const defaultOptions = {
-  ws: false,
-  https: false,
-  http2: false,
-  tls: false,
+  ws: null,
+  http: {},
+  https: null,
+  http2: null,
+  tls: null,
   trustProxy: false,
   serverFactory: null,
   protocolDecoder: protocolDecoder,
@@ -31,20 +32,21 @@ const createServer = (aedes, options) => {
   if (options.serverFactory) {
     server = options.serverFactory(aedes, options)
   } else if (options.tls) {
-    server = tls.createServer(options, aedesHandler)
+    server = tls.createServer(options.tls, (conn) => {
+      bindConnection(options, aedesHandler, conn)
+    })
   } else if (options.ws) {
     if (options.https) {
       if (options.http2) {
-        server = http2.createSecureServer()
+        server = http2.createSecureServer({ ...options.http2, ...options.https })
       } else {
-        server = https.createServer()
+        server = https.createServer({ ...options.http, ...options.https })
       }
     } else {
       if (options.http2) {
-        server = http2.createServer()
-        // server.on('session', sessionTimeout(options.http2SessionTimeout))
+        server = http2.createServer(options.http2)
       } else {
-        server = http.createServer()
+        server = http.createServer(options.http)
       }
     }
     const ws = new WebSocket.Server({ server })
@@ -71,11 +73,12 @@ const bindConnection = (options, aedesHandler, conn, req = {}) => {
 }
 
 const extractConnectionDetails = (options, aedesHandler, conn, req = {}) => {
-  // todo check drain event ?
   const onReadable = (err) => {
     if (err) {
       return
     }
+    // buffer should contain the whole proxy header if any
+    // see https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
     const buffer = conn.read(null)
     if (buffer) {
       const protocol = options.protocolDecoder(conn, buffer, req)

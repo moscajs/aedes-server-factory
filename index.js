@@ -1,6 +1,9 @@
 'use strict'
 
-const { extractSocketDetails, protocolDecoder } = require('aedes-protocol-decoder')
+const {
+  extractSocketDetails,
+  protocolDecoder
+} = require('aedes-protocol-decoder')
 const http = require('http')
 const https = require('https')
 const http2 = require('http2')
@@ -10,7 +13,7 @@ const WebSocket = require('ws')
 
 const defaultOptions = {
   ws: null,
-  http: {},
+  http: null,
   https: null,
   http2: null,
   tls: null,
@@ -26,57 +29,61 @@ const createServer = (aedes, options) => {
   }
 
   options = Object.assign({}, defaultOptions, options)
-  const aedesHandler = aedes.handle
 
   let server = null
   if (options.serverFactory) {
     server = options.serverFactory(aedes, options)
   } else if (options.tls) {
     server = tls.createServer(options.tls, (conn) => {
-      bindConnection(options, aedesHandler, conn)
+      bindConnection(aedes, options, conn)
     })
   } else if (options.ws) {
     if (options.https) {
       if (options.http2) {
-        server = http2.createSecureServer({ ...options.http2, ...options.https })
+        server = http2.createSecureServer({
+          ...options.http2,
+          ...options.https
+        })
       } else {
-        server = https.createServer({ ...options.http, ...options.https })
+        server = https.createServer({
+          ...(options.http || {}),
+          ...options.https
+        })
       }
     } else {
       if (options.http2) {
         server = http2.createServer(options.http2)
       } else {
-        server = http.createServer(options.http)
+        server = http.createServer(options.http || {})
       }
     }
     const ws = new WebSocket.Server({ server })
     ws.on('connection', (conn, req) => {
       const stream = WebSocket.createWebSocketStream(conn)
+      // the _socket object is needed in bindConnection to retrieve info from the stream
+      // before passing it to aedes.handle
       stream._socket = conn._socket
-      bindConnection(options, aedesHandler, stream, req)
+      bindConnection(aedes, options, stream, req)
     })
   } else {
     server = net.createServer((conn) => {
-      bindConnection(options, aedesHandler, conn)
+      bindConnection(aedes, options, conn)
     })
   }
   return server
 }
 
-const bindConnection = (options, aedesHandler, conn, req = {}) => {
+const bindConnection = (aedes, options, conn, req = {}) => {
   if (options.trustProxy) {
-    extractConnectionDetails(options, aedesHandler, conn, req)
+    extractConnectionDetails(aedes, options, conn, req)
   } else {
     req.connDetails = options.extractSocketDetails(conn.socket || conn)
-    aedesHandler(conn, req)
+    aedes.handle(conn, req)
   }
 }
 
-const extractConnectionDetails = (options, aedesHandler, conn, req = {}) => {
-  const onReadable = (err) => {
-    if (err) {
-      return
-    }
+const extractConnectionDetails = (aedes, options, conn, req = {}) => {
+  const onReadable = () => {
     // buffer should contain the whole proxy header if any
     // see https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt
     const buffer = conn.read(null)
@@ -86,11 +93,17 @@ const extractConnectionDetails = (options, aedesHandler, conn, req = {}) => {
       conn.removeListener('readable', onReadable)
       conn.pause()
       conn.unshift(protocol.data || buffer)
-      aedesHandler(conn, req)
+      aedes.handle(conn, req)
     }
   }
 
+  const onError = (error) => {
+    conn.removeListener('error', onError)
+    aedes.emit('error', error)
+  }
+
   conn.on('readable', onReadable)
+  conn.on('error', onError)
 }
 
 module.exports = {

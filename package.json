@@ -1,6 +1,6 @@
 {
   "name": "aedes-server-factory",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Aedes helper to create a server and bind its connection to Aedes",
   "main": "index.js",
   "types": "types/index.d.ts",
@@ -26,7 +26,7 @@
     "url": "http://github.com/moscajs/aedes-server-factory/issues"
   },
   "engines": {
-    "node": ">=8"
+    "node": ">=10"
   },
   "release-it": {
     "github": {

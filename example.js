@@ -216,7 +216,7 @@ function startAedes () {
   })
 
   var server = createServer(broker, { trustProxy: true })
-  var httpServer = createServer(broker, { trustProxy: true, ws: true })
+  var httpServer = createServer(broker, { trustProxy: true, ws: true, http: null })
 
   server.listen(brokerPort, function () {
     console.log('Aedes listening on TCP :', server.address())

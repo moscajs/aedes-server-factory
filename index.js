@@ -91,6 +91,7 @@ const extractConnectionDetails = (aedes, options, conn, req = {}) => {
       const protocol = options.protocolDecoder(conn, buffer, req)
       req.connDetails = protocol
       conn.removeListener('readable', onReadable)
+      conn.removeListener('error', onError)
       conn.pause()
       conn.unshift(protocol.data || buffer)
       aedes.handle(conn, req)

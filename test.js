@@ -134,9 +134,9 @@ test('websocket clients have access to the connection details from the socket', 
   var client = mqtt.connect(`ws://localhost:${port}`)
 
   function finish () {
+    client.end(true)
     broker.close()
     server.close()
-    client.end()
     t.end()
   }
 })
@@ -174,9 +174,9 @@ test('websocket proxied clients have access to the connection details', function
   })
 
   function finish () {
+    client.end(true)
     broker.close()
     server.close()
-    client.end()
     t.end()
   }
 })

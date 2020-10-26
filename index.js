@@ -99,6 +99,7 @@ const extractConnectionDetails = (aedes, options, conn, req = {}) => {
   }
 
   const onError = (error) => {
+    conn.removeListener('readable', onReadable)
     conn.removeListener('error', onError)
     aedes.emit('error', error)
   }

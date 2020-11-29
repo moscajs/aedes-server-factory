@@ -36,3 +36,5 @@ export type ServerFactory = (
   broker: Aedes,
   options: ServerFactoryOptions
 ) => Server;
+
+export declare const createServer: ServerFactory;

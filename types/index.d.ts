@@ -37,4 +37,4 @@ export type ServerFactory = (
   options: ServerFactoryOptions
 ) => Server;
 
-export declare const createServer: ServerFactory;
+export declare const createServer: ServerFactory

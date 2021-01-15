@@ -34,7 +34,7 @@ type Server = NetServer | HttpServer | Http2Server | Http2SecureServer;
 
 export type ServerFactory = (
   broker: Aedes,
-  options: ServerFactoryOptions
+  options?: ServerFactoryOptions
 ) => Server;
 
 export declare const createServer: ServerFactory

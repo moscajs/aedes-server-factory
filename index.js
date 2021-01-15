@@ -23,7 +23,7 @@ const defaultOptions = {
   extractSocketDetails: extractSocketDetails
 }
 
-const createServer = (aedes, options) => {
+const createServer = (aedes, options = {}) => {
   if (!aedes || !aedes.handle) {
     throw new Error('Missing aedes handler')
   }

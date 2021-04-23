@@ -58,7 +58,7 @@ const createServer = (aedes, options = {}) => {
       }
     }
     const ws = new WebSocket.Server({ server })
-    ws.on('error', error => aedes.emit('error', error)
+    ws.on('error', error => server.emit('error', error))
     ws.on('connection', (conn, req) => {
       const stream = WebSocket.createWebSocketStream(conn)
       // the _socket object is needed in bindConnection to retrieve info from the stream

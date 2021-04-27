@@ -1,6 +1,6 @@
 {
   "name": "aedes-server-factory",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Aedes helper to create a server and bind its connection to Aedes",
   "main": "index.js",
   "types": "types/index.d.ts",

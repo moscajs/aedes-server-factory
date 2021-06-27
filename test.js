@@ -2,6 +2,7 @@
 
 const test = require('tape').test
 const aedes = require('aedes')
+const fs = require('fs')
 const mqtt = require('mqtt')
 const mqttPacket = require('mqtt-packet')
 const net = require('net')
@@ -107,6 +108,58 @@ test('tcp proxied clients have access to the connection details from the proxy h
   }
 })
 
+test('tls clients have access to the connection details from the socket', function (t) {
+  t.plan(3)
+
+  const port = 4883
+  const broker = aedes({
+    preConnect: function (client, packet, done) {
+      if (client && client.connDetails && client.connDetails.ipAddress) {
+        client.ip = client.connDetails.ipAddress
+        t.equal('::ffff:127.0.0.1', client.ip)
+        t.equal(packet.cmd, 'connect')
+      } else {
+        t.fail('no ip address present')
+      }
+      done(null, true)
+      setImmediate(finish)
+    }
+  })
+
+  const server = createServer(broker, {
+    trustProxy: false,
+    tls: {
+      key: fs.readFileSync('./tls/server.key'),
+      cert: fs.readFileSync('./tls/server-crt.pem'),
+      ca: fs.readFileSync('./tls/ec-cacert.pem'),
+      requestCert: true,
+      rejectUnauthorized: true,
+      minVersion: 'TLSv1.2'
+    }
+  })
+  server.listen(port, function (err) {
+    t.error(err, 'no error')
+  })
+
+  const client = mqtt.connect({
+    port,
+    keepalive: 0,
+    clientId: 'mqtt-client',
+    clean: false,
+    protocol: 'mqtts',
+    key: fs.readFileSync('./tls/client-1.key'),
+    cert: fs.readFileSync('./tls/client-1-crt.pem'),
+    ca: fs.readFileSync('./tls/ec-cacert.pem')
+  })
+
+  function finish () {
+    client.end()
+    broker.close()
+    server.close()
+    t.end()
+  }
+})
+
 test('websocket clients have access to the connection details from the socket', function (t) {
   t.plan(3)
 
@@ -171,6 +224,55 @@ test('websocket proxied clients have access to the connection details', function
         'X-Real-Ip': clientIp
       }
     }
+  })
+
+  function finish () {
+    client.end(true)
+    broker.close()
+    server.close()
+    t.end()
+  }
+})
+
+test('secure websocket clients have access to the connection details from the socket', function (t) {
+  t.plan(3)
+
+  const clientIp = '::ffff:127.0.0.1'
+  const port = 4883
+  const broker = aedes({
+    preConnect: function (client, packet, done) {
+      if (client.connDetails && client.connDetails.ipAddress) {
+        client.ip = client.connDetails.ipAddress
+        t.equal(clientIp, client.ip)
+        t.equal(packet.cmd, 'connect')
+      } else {
+        t.fail('no ip address present')
+      }
+      done(null, true)
+      setImmediate(finish)
+    }
+  })
+
+  const server = createServer(broker, {
+    trustProxy: false,
+    ws: true,
+    https: {
+      key: fs.readFileSync('./tls/server.key'),
+      cert: fs.readFileSync('./tls/server-crt.pem'),
+      ca: fs.readFileSync('./tls/ec-cacert.pem'),
+      requestCert: true,
+      rejectUnauthorized: true,
+      minVersion: 'TLSv1.2'
+    }
+  })
+  server.listen(port, function (err) {
+    t.error(err, 'no error')
+  })
+
+  const client = mqtt.connect(`ws://localhost:${port}`, {
+    key: fs.readFileSync('./tls/client-1.key'),
+    cert: fs.readFileSync('./tls/client-1-crt.pem'),
+    ca: fs.readFileSync('./tls/ec-cacert.pem')
   })
 
   function finish () {

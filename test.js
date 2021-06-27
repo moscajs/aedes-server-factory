@@ -1,18 +1,18 @@
 'use strict'
 
-var test = require('tape').test
-var aedes = require('aedes')
-var mqtt = require('mqtt')
-var mqttPacket = require('mqtt-packet')
-var net = require('net')
-var proxyProtocol = require('proxy-protocol-js')
-var { createServer } = require('./index')
+const test = require('tape').test
+const aedes = require('aedes')
+const mqtt = require('mqtt')
+const mqttPacket = require('mqtt-packet')
+const net = require('net')
+const proxyProtocol = require('proxy-protocol-js')
+const { createServer } = require('./index')
 
 test('tcp clients have access to the connection details from the socket', function (t) {
   t.plan(3)
 
-  var port = 4883
-  var broker = aedes({
+  const port = 4883
+  const broker = aedes({
     preConnect: function (client, packet, done) {
       if (client && client.connDetails && client.connDetails.ipAddress) {
         client.ip = client.connDetails.ipAddress
@@ -26,12 +26,12 @@ test('tcp clients have access to the connection details from the socket', functi
     }
   })
 
-  var server = createServer(broker, { trustProxy: false })
+  const server = createServer(broker, { trustProxy: false })
   server.listen(port, function (err) {
     t.error(err, 'no error')
   })
 
-  var client = mqtt.connect({
+  const client = mqtt.connect({
     port,
     keepalive: 0,
     clientId: 'mqtt-client',
@@ -49,9 +49,9 @@ test('tcp clients have access to the connection details from the socket', functi
 test('tcp proxied clients have access to the connection details from the proxy header', function (t) {
   t.plan(3)
 
-  var port = 4883
-  var clientIp = '192.168.0.140'
-  var connectPacket = {
+  const port = 4883
+  const clientIp = '192.168.0.140'
+  const connectPacket = {
     cmd: 'connect',
     protocolId: 'MQIsdp',
     protocolVersion: 3,
@@ -60,17 +60,17 @@ test('tcp proxied clients have access to the connection details from the proxy h
     keepalive: 0
   }
 
-  var buf = mqttPacket.generate(connectPacket)
-  var src = new proxyProtocol.Peer(clientIp, 12345)
-  var dst = new proxyProtocol.Peer('127.0.0.1', port)
-  var protocol = new proxyProtocol.V1BinaryProxyProtocol(
+  const buf = mqttPacket.generate(connectPacket)
+  const src = new proxyProtocol.Peer(clientIp, 12345)
+  const dst = new proxyProtocol.Peer('127.0.0.1', port)
+  const protocol = new proxyProtocol.V1BinaryProxyProtocol(
     proxyProtocol.INETProtocol.TCP4,
     src,
     dst,
     buf
   ).build()
 
-  var broker = aedes({
+  const broker = aedes({
     preConnect: function (client, packet, done) {
       if (client.connDetails && client.connDetails.ipAddress) {
         client.ip = client.connDetails.ipAddress
@@ -84,12 +84,12 @@ test('tcp proxied clients have access to the connection details from the proxy h
     }
   })
 
-  var server = createServer(broker, { trustProxy: true })
+  const server = createServer(broker, { trustProxy: true })
   server.listen(port, function (err) {
     t.error(err, 'no error')
   })
 
-  var client = net.connect(
+  const client = net.connect(
     {
       port,
       timeout: 0
@@ -110,9 +110,9 @@ test('tcp proxied clients have access to the connection details from the proxy h
 test('websocket clients have access to the connection details from the socket', function (t) {
   t.plan(3)
 
-  var clientIp = '::ffff:127.0.0.1'
-  var port = 4883
-  var broker = aedes({
+  const clientIp = '::ffff:127.0.0.1'
+  const port = 4883
+  const broker = aedes({
     preConnect: function (client, packet, done) {
       if (client.connDetails && client.connDetails.ipAddress) {
         client.ip = client.connDetails.ipAddress
@@ -126,12 +126,12 @@ test('websocket clients have access to the connection details from the socket', 
     }
   })
 
-  var server = createServer(broker, { trustProxy: false, ws: true })
+  const server = createServer(broker, { trustProxy: false, ws: true })
   server.listen(port, function (err) {
     t.error(err, 'no error')
   })
 
-  var client = mqtt.connect(`ws://localhost:${port}`)
+  const client = mqtt.connect(`ws://localhost:${port}`)
 
   function finish () {
     client.end(true)
@@ -144,9 +144,9 @@ test('websocket clients have access to the connection details from the socket', 
 test('websocket proxied clients have access to the connection details', function (t) {
   t.plan(3)
 
-  var clientIp = '192.168.0.140'
-  var port = 4883
-  var broker = aedes({
+  const clientIp = '192.168.0.140'
+  const port = 4883
+  const broker = aedes({
     preConnect: function (client, packet, done) {
       if (client.connDetails && client.connDetails.ipAddress) {
         client.ip = client.connDetails.ipAddress
@@ -160,12 +160,12 @@ test('websocket proxied clients have access to the connection details', function
     }
   })
 
-  var server = createServer(broker, { trustProxy: true, ws: true })
+  const server = createServer(broker, { trustProxy: true, ws: true })
   server.listen(port, function (err) {
     t.error(err, 'no error')
   })
 
-  var client = mqtt.connect(`ws://localhost:${port}`, {
+  const client = mqtt.connect(`ws://localhost:${port}`, {
     wsOptions: {
       headers: {
         'X-Real-Ip': clientIp

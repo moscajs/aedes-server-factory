@@ -20,6 +20,7 @@ import { TlsOptions } from 'tls'
 
 export interface ServerFactoryOptions {
   ws?: boolean;
+  customWSErroHandler:? (error: Error) => void | Promise<void>;
   http?: HttpServerOptions;
   https?: HttpSecureServerOptions | Http2SecureServerOptions;
   http2?: Http2ServerOptions;

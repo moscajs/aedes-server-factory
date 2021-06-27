@@ -297,7 +297,7 @@ test('websocket server can define their own websocket error handler', function (
   const server2 = createServer(broker, {
     trustProxy: false,
     ws: true,
-    customWSErroHandler: function (error) {
+    customWSErrorHandler: function (error) {
       t.equal(error.message, `listen EADDRINUSE: address already in use :::${port}`)
       setImmediate(finish)
     }

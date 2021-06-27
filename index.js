@@ -13,7 +13,7 @@ const WebSocket = require('ws')
 
 const defaultOptions = {
   ws: null,
-  customWSErroHandler: () => {},
+  customWSErrorHandler: () => {},
   http: null,
   https: null,
   http2: null,
@@ -59,7 +59,7 @@ const createServer = (aedes, options = {}) => {
       }
     }
     const ws = new WebSocket.Server({ server })
-    ws.on('error', options.customWSErroHandler)
+    ws.on('error', options.customWSErrorHandler)
     ws.on('connection', (conn, req) => {
       const stream = WebSocket.createWebSocketStream(conn)
       // the _socket object is needed in bindConnection to retrieve info from the stream

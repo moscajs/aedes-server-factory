@@ -282,3 +282,35 @@ test('secure websocket clients have access to the connection details from the so
     t.end()
   }
 })
+
+test('websocket server can define their own websocket error handler', function (t) {
+  t.plan(2)
+
+  const port = 4883
+  const broker = aedes()
+
+  const server1 = createServer(broker)
+  server1.listen(port, function (err) {
+    t.error(err, 'no error')
+  })
+
+  const server2 = createServer(broker, {
+    trustProxy: false,
+    ws: true,
+    customWSErroHandler: function (error) {
+      t.equal(error.message, `listen EADDRINUSE: address already in use :::${port}`)
+      setImmediate(finish)
+    }
+  })
+  server2.listen(port, function () {})
+
+  const client = mqtt.connect(`ws://localhost:${port}`)
+
+  function finish () {
+    client.end(true)
+    broker.close()
+    server1.close()
+    server2.close()
+    t.end()
+  }
+})

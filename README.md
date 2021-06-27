@@ -37,15 +37,24 @@ Default to null, if defined, will be used to create TCP secure server.
 ### ws
 
 boolean used to wrap a http | http2 | https server in a websocket server.
+
+### http
+
 [`Object`](https://nodejs.org/api/http.html#http_http_createserver_options_requestlistener) used to create and configure HTTP server.
 
 `createServer` will return the HTTP server if no HTTP options is defined.
+
+### customWSErrorHandler
+
+function used to handle errors thrown by WS server.
+
+`customWSErrorHandler` will be called with [`Error`](https://github.com/websockets/ws/blob/master/doc/ws.md#event-error).
 
 ### http2
 
 [`Object`](https://nodejs.org/api/http2.html#http2_http2_createserver_options_onrequesthandler) used to create and configure HTTP2 server.
 
-Default to null, if defined, will be used to create HTTP2 server instance
+Default to null, if defined, will be used to create HTTP2 server instance.
 
 ### https
 

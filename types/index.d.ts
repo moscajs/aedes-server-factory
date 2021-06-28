@@ -1,6 +1,7 @@
 /* eslint no-unused-vars: 0 */
 /* eslint no-undef: 0 */
 /* eslint space-infix-ops: 0 */
+/* eslint no-use-before-define: 0 */
 
 /// <reference types="node" />
 
@@ -19,6 +20,7 @@ import { TlsOptions } from 'tls'
 
 export interface ServerFactoryOptions {
   ws?: boolean;
+  customWSErrorHandler:? (error: Error) => void | Promise<void>;
   http?: HttpServerOptions;
   https?: HttpSecureServerOptions | Http2SecureServerOptions;
   http2?: Http2ServerOptions;

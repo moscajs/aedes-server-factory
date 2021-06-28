@@ -1,15 +1,15 @@
 'use strict'
 
-var aedes = require('aedes')
-var mqtt = require('mqtt')
-var mqttPacket = require('mqtt-packet')
-var net = require('net')
-var proxyProtocol = require('proxy-protocol-js')
-var { createServer } = require('./index')
+const aedes = require('aedes')
+const mqtt = require('mqtt')
+const mqttPacket = require('mqtt-packet')
+const net = require('net')
+const proxyProtocol = require('proxy-protocol-js')
+const { createServer } = require('./index')
 
-var brokerPort = 4883
-var wsBrokerPort = 4884
-var messageId = 1
+const brokerPort = 4883
+const wsBrokerPort = 4884
+let messageId = 1
 
 // from https://stackoverflow.com/questions/57077161/how-do-i-convert-hex-buffer-to-ipv6-in-javascript
 function parseIpV6 (ip) {
@@ -22,12 +22,12 @@ function parseIpV6 (ip) {
 }
 
 function generateProxyPacket (version = 1, ipFamily = 4, serverPort, packet) {
-  var hostIpV4 = '0.0.0.0'
-  var clientIpV4 = '192.168.1.128'
-  var hostIpV6 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-  var clientIpV6 = [0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 1, 128]
+  const hostIpV4 = '0.0.0.0'
+  const clientIpV4 = '192.168.1.128'
+  const hostIpV6 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  const clientIpV6 = [0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 1, 128]
 
-  var proxyPacket
+  let proxyPacket
   if (version === 1) {
     if (ipFamily === 4) {
       proxyPacket = new proxyProtocol.V1BinaryProxyProtocol(
@@ -115,7 +115,7 @@ function sendPackets (conn) {
 }
 
 function sendProxyPacket (version = 1, ipFamily = 4, serverPort) {
-  var packet = {
+  const packet = {
     cmd: 'connect',
     protocolId: 'MQTT',
     protocolVersion: 4,
@@ -124,19 +124,19 @@ function sendProxyPacket (version = 1, ipFamily = 4, serverPort) {
     keepalive: 0
   }
 
-  var proxyPacket = generateProxyPacket(version, ipFamily, serverPort, packet)
-  var parsedProto =
+  const proxyPacket = generateProxyPacket(version, ipFamily, serverPort, packet)
+  const parsedProto =
     version === 1
       ? proxyProtocol.V1BinaryProxyProtocol.parse(proxyPacket)
       : proxyProtocol.V2ProxyProtocol.parse(proxyPacket)
   // console.log(parsedProto)
 
-  var dstPort =
+  const dstPort =
     version === 1
       ? parsedProto.destination.port
       : parsedProto.proxyAddress.destinationPort
 
-  var dstHost
+  let dstHost
   if (version === 1) {
     if (ipFamily === 4) {
       dstHost = parsedProto.destination.ipAddress
@@ -156,7 +156,7 @@ function sendProxyPacket (version = 1, ipFamily = 4, serverPort) {
   }
 
   console.log('Connection to :', dstHost, dstPort)
-  var mqttConn = net.createConnection({
+  const mqttConn = net.createConnection({
     port: dstPort,
     host: dstHost
   }, function () {
@@ -167,7 +167,7 @@ function sendProxyPacket (version = 1, ipFamily = 4, serverPort) {
 }
 
 function sendTcpPacket (serverPort) {
-  var packet = {
+  const packet = {
     cmd: 'connect',
     protocolId: 'MQIsdp',
     protocolVersion: 3,
@@ -178,7 +178,7 @@ function sendTcpPacket (serverPort) {
 
   console.log('Connection to :', '0.0.0.0', serverPort)
 
-  var tcpConn = net.createConnection({
+  const tcpConn = net.createConnection({
     port: serverPort,
     host: '0.0.0.0'
   }, function () {
@@ -189,8 +189,8 @@ function sendTcpPacket (serverPort) {
 }
 
 function sendWsPacket (serverPort) {
-  var clientIpV4 = '192.168.1.128'
-  var client = mqtt.connect(`ws://localhost:${serverPort}`, {
+  const clientIpV4 = '192.168.1.128'
+  const client = mqtt.connect(`ws://localhost:${serverPort}`, {
     clientId: 'ws-client',
     wsOptions: {
       headers: {
@@ -205,9 +205,9 @@ function sendWsPacket (serverPort) {
 }
 
 function startAedes () {
-  var delay = 500
+  const delay = 500
 
-  var broker = aedes({
+  const broker = aedes({
     preConnect: function (client, packet, done) {
       // console.log('Aedes preConnect : ', { connDetails: client.connDetails, packet })
       client.ip = client.connDetails.ipAddress
@@ -215,8 +215,8 @@ function startAedes () {
     }
   })
 
-  var server = createServer(broker, { trustProxy: true })
-  var httpServer = createServer(broker, { trustProxy: true, ws: true, http: null })
+  const server = createServer(broker, { trustProxy: true })
+  const httpServer = createServer(broker, { trustProxy: true, ws: true, http: null })
 
   server.listen(brokerPort, function () {
     console.log('Aedes listening on TCP :', server.address())

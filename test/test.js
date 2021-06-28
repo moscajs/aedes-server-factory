@@ -7,7 +7,7 @@ const mqtt = require('mqtt')
 const mqttPacket = require('mqtt-packet')
 const net = require('net')
 const proxyProtocol = require('proxy-protocol-js')
-const { createServer } = require('./index')
+const { createServer } = require('../index')
 
 test('tcp clients have access to the connection details from the socket', function (t) {
   t.plan(3)
@@ -129,9 +129,9 @@ test('tls clients have access to the connection details from the socket', functi
   const server = createServer(broker, {
     trustProxy: false,
     tls: {
-      key: fs.readFileSync('./tls/server.key'),
-      cert: fs.readFileSync('./tls/server-crt.pem'),
-      ca: fs.readFileSync('./tls/ec-cacert.pem'),
+      key: fs.readFileSync('./test/fixtures/server.key'),
+      cert: fs.readFileSync('./test/fixtures/server-crt.pem'),
+      ca: fs.readFileSync('./test/fixtures/ec-cacert.pem'),
       requestCert: true,
       rejectUnauthorized: true,
       minVersion: 'TLSv1.2'
@@ -147,9 +147,9 @@ test('tls clients have access to the connection details from the socket', functi
     clientId: 'mqtt-client',
     clean: false,
     protocol: 'mqtts',
-    key: fs.readFileSync('./tls/client-1.key'),
-    cert: fs.readFileSync('./tls/client-1-crt.pem'),
-    ca: fs.readFileSync('./tls/ec-cacert.pem')
+    key: fs.readFileSync('./test/fixtures/client-1.key'),
+    cert: fs.readFileSync('./test/fixtures/client-1-crt.pem'),
+    ca: fs.readFileSync('./test/fixtures/ec-cacert.pem')
   })
 
   function finish () {
@@ -257,9 +257,9 @@ test('secure websocket clients have access to the connection details from the so
     trustProxy: false,
     ws: true,
     https: {
-      key: fs.readFileSync('./tls/server.key'),
-      cert: fs.readFileSync('./tls/server-crt.pem'),
-      ca: fs.readFileSync('./tls/ec-cacert.pem'),
+      key: fs.readFileSync('./test/fixtures/server.key'),
+      cert: fs.readFileSync('./test/fixtures/server-crt.pem'),
+      ca: fs.readFileSync('./test/fixtures/ec-cacert.pem'),
       requestCert: true,
       rejectUnauthorized: true,
       minVersion: 'TLSv1.2'
@@ -270,9 +270,9 @@ test('secure websocket clients have access to the connection details from the so
   })
 
   const client = mqtt.connect(`ws://localhost:${port}`, {
-    key: fs.readFileSync('./tls/client-1.key'),
-    cert: fs.readFileSync('./tls/client-1-crt.pem'),
-    ca: fs.readFileSync('./tls/ec-cacert.pem')
+    key: fs.readFileSync('./test/fixtures/client-1.key'),
+    cert: fs.readFileSync('./test/fixtures/client-1-crt.pem'),
+    ca: fs.readFileSync('./test/fixtures/ec-cacert.pem')
   })
 
   function finish () {

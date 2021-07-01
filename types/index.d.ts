@@ -26,6 +26,7 @@ export interface ServerFactoryOptions {
   http2?: Http2ServerOptions;
   tls?: TlsOptions;
   tcp?: { allowHalfOpen?: boolean; pauseOnConnect?: boolean };
+  quic?:{ port?: number; key: ArrayBuffer; cert: ArrayBuffer; alpn: string};
   serverFactory?: ServerFactory;
   protocolDecoder?: ProtocolDecoder;
   extractSocketDetails?: ExtractSocketDetails;

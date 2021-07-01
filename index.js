@@ -67,9 +67,7 @@ const createServer = (aedes, options = {}) => {
       stream._socket = conn._socket
       bindConnection(aedes, options, stream, req)
     })
-
   } else if (options.quic) {
-
     const { createQuicSocket } = require('net')
 
     server = createQuicSocket({
@@ -86,9 +84,7 @@ const createServer = (aedes, options = {}) => {
         stream.socket = session.socket
         bindConnection(aedes, options, stream)
       })
-
     })
-
   } else {
     server = net.createServer((conn) => {
       bindConnection(aedes, options, conn)

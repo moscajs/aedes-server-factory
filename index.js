@@ -67,6 +67,24 @@ const createServer = (aedes, options = {}) => {
       stream._socket = conn._socket
       bindConnection(aedes, options, stream, req)
     })
+  } else if (options.quic) {
+    const { createQuicSocket } = require('net')
+
+    server = createQuicSocket({
+      endpoint: { port: options.quic.port || 8885 }, // default port 8885 if not mentioned in options
+      server: {
+        key: options.quic.key,
+        cert: options.quic.cert,
+        alpn: options.quic.alpn || 'mqtt'
+      }
+    })
+
+    server.on('session', (session) => {
+      session.on('stream', (stream) => {
+        stream.socket = session.socket
+        bindConnection(aedes, options, stream)
+      })
+    })
   } else {
     server = net.createServer((conn) => {
       bindConnection(aedes, options, conn)
